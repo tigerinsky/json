@@ -1,0 +1,13 @@
+#edit-mode: -*- python -*-
+#coding:utf8
+
+CXX('g++')
+CXXFLAGS('-std=gnu++11 -D_GNU_SOURCE -D__STDC_LIMIT_MACROS -g -pipe -W -Wall -fPIC -fno-omit-frame-pointer')
+LDFLAGS('-ldl -lpthread -lm -lrt')
+
+sources = GLOB('json.h')
+headers = GLOB('json.cpp')
+
+#APP('demo', GLOB('main.cpp json.cpp'))
+APP('demo', GLOB('demo/demo.cpp impl/*.cpp ./json.cpp'))
+#STATIC_LIB('json', sources, headers)
