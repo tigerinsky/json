@@ -43,7 +43,8 @@ public:
 
 public:
     JsonObj* create(int type); 
-    JsonObj* parse(const char* str);
+    JsonObj* deserialize(const char* str);
+    void serialize(const JsonObj* obj, std::string* str);
     void clear();
 
 private:

@@ -60,7 +60,7 @@ void Json::clear() {
     _alloc_objs.clear();
 }
 
-JsonObj* Json::parse(const char* str) {
+JsonObj* Json::deserialize(const char* str) {
     if ((iconv_t)-1 == _conv) {
         _conv = iconv_open("utf8", "utf16"); 
         if ((iconv_t)-1 == _conv) {
@@ -69,6 +69,10 @@ JsonObj* Json::parse(const char* str) {
     }
     _cur = str;
     return deserialize_value();
+}
+
+void Json::serialize(const JsonObj* obj, std::string* str) {
+    
 }
 
 JsonObj* Json::deserialize_value() {
@@ -186,7 +190,7 @@ void Json::flush_unicode_to_strbuf() {
             throw ParseException() << "iconv error"; 
         }
         assert(0 == size_in);
-        _str_buf_size += size_out;
+        _str_buf_size = _str_buf_capacity - size_out;
         _unicode_buf.clear();
     }
 }
@@ -206,8 +210,11 @@ void Json::enlarge_strbuf(size_t extra) {
 }
 
 void Json::append_to_strbuf(const char* data, size_t len) {
-    enlarge_strbuf(len);
-    memcpy(_str_buf + _str_buf_size, data, len);
+    if (len) {
+        enlarge_strbuf(len);
+        memcpy(_str_buf + _str_buf_size, data, len);
+        _str_buf_size += len;
+    }
 }
 
 void Json::push_to_unicode_buf() {
@@ -363,7 +370,7 @@ Json::token_type Json::_s_token_map[0x100];
 char Json::_s_unescape_map[0x100];
 uint16_t Json::_s_hex_map[0x100];
 
-bool Json::_s_initer = Json::_s_init_token_map(), Json::_s_init_unescape_map(), Json::_s_init_hex_map();
+bool Json::_s_initer = (Json::_s_init_token_map(), Json::_s_init_unescape_map(), Json::_s_init_hex_map());
 
 }
 }

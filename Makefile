@@ -9,15 +9,17 @@ LIBPATH=-Xlinker "-(" -ldl -lpthread -lm -lrt /home/meihua/dy/src/json/../seg/li
 .PHONY:all
 all:prepare \
 demo \
+libjson.a \
 
 
 .PHONY:prepare
 prepare:
 	mkdir -p ./output/bin
+	mkdir -p ./output/lib ./output/include
 
 .PHONY:clean
 clean:
-	rm -rf /home/meihua/dy/src/json/impl/json_array.o /home/meihua/dy/src/json/demo/demo.o /home/meihua/dy/src/json/impl/json_string.o /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/impl/json_number.o /home/meihua/dy/src/json/impl/json_map.o ./output
+	rm -rf /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/impl/json_array.o /home/meihua/dy/src/json/exception.o /home/meihua/dy/src/json/demo/demo.o /home/meihua/dy/src/json/impl/json_string.o /home/meihua/dy/src/json/define.o /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/impl/json_number.o /home/meihua/dy/src/json/impl/json_map.o /home/meihua/dy/src/json/json_obj.o ./output
 
 
 #---------- link ----------
@@ -30,13 +32,25 @@ demo:/home/meihua/dy/src/json/impl/json_array.o \
 
 	$(CXX) /home/meihua/dy/src/json/impl/json_array.o /home/meihua/dy/src/json/demo/demo.o /home/meihua/dy/src/json/impl/json_string.o /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/impl/json_number.o /home/meihua/dy/src/json/impl/json_map.o $(LIBPATH) -o ./output/bin/demo
 
+libjson.a:/home/meihua/dy/src/json/json.o \
+/home/meihua/dy/src/json/json_obj.o \
+/home/meihua/dy/src/json/exception.o \
+/home/meihua/dy/src/json/define.o \
+
+	ar crs ./output/lib/libjson.a /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/json_obj.o /home/meihua/dy/src/json/exception.o /home/meihua/dy/src/json/define.o
+	cp /home/meihua/dy/src/json/impl/json_string.cpp /home/meihua/dy/src/json/impl/json_number.cpp /home/meihua/dy/src/json/impl/json_array.cpp /home/meihua/dy/src/json/impl/json_map.cpp /home/meihua/dy/src/json/json.cpp ./output/include/
 
 
 #---------- obj ----------
+/home/meihua/dy/src/json/json.o: /home/meihua/dy/src/json/json.h \
+ /home/meihua/dy/src/json/json_obj.h /home/meihua/dy/src/json/define.h
+	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/json.h
 /home/meihua/dy/src/json/impl/json_array.o: /home/meihua/dy/src/json/impl/json_array.cpp \
  /home/meihua/dy/src/json/impl/../json_obj.h \
  /home/meihua/dy/src/json/impl/../define.h
 	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/impl/json_array.o /home/meihua/dy/src/json/impl/json_array.cpp
+/home/meihua/dy/src/json/exception.o: /home/meihua/dy/src/json/exception.h
+	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/exception.o /home/meihua/dy/src/json/exception.h
 /home/meihua/dy/src/json/demo/demo.o: /home/meihua/dy/src/json/demo/demo.cpp \
  /home/meihua/dy/src/json/demo/../json.h \
  /home/meihua/dy/src/json/demo/../json_obj.h \
@@ -47,17 +61,23 @@ demo:/home/meihua/dy/src/json/impl/json_array.o \
  /home/meihua/dy/src/json/impl/../json_obj.h \
  /home/meihua/dy/src/json/impl/../define.h
 	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/impl/json_string.o /home/meihua/dy/src/json/impl/json_string.cpp
+/home/meihua/dy/src/json/define.o: /home/meihua/dy/src/json/define.h
+	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/define.o /home/meihua/dy/src/json/define.h
 /home/meihua/dy/src/json/json.o: /home/meihua/dy/src/json/json.cpp /home/meihua/dy/src/json/json.h \
  /home/meihua/dy/src/json/json_obj.h /home/meihua/dy/src/json/define.h \
  /home/meihua/dy/src/json/exception.h
 	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/json.o /home/meihua/dy/src/json/json.cpp
 /home/meihua/dy/src/json/impl/json_number.o: /home/meihua/dy/src/json/impl/json_number.cpp \
  /home/meihua/dy/src/json/impl/../json_obj.h \
- /home/meihua/dy/src/json/impl/../define.h
+ /home/meihua/dy/src/json/impl/../define.h \
+ /home/meihua/dy/src/json/impl/../exception.h
 	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/impl/json_number.o /home/meihua/dy/src/json/impl/json_number.cpp
 /home/meihua/dy/src/json/impl/json_map.o: /home/meihua/dy/src/json/impl/json_map.cpp \
  /home/meihua/dy/src/json/impl/../json_obj.h \
  /home/meihua/dy/src/json/impl/../define.h
 	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/impl/json_map.o /home/meihua/dy/src/json/impl/json_map.cpp
+/home/meihua/dy/src/json/json_obj.o: /home/meihua/dy/src/json/json_obj.h \
+ /home/meihua/dy/src/json/define.h
+	$(CXX) $(INCPATH) $(CXXFLAGS) -c -o /home/meihua/dy/src/json/json_obj.o /home/meihua/dy/src/json/json_obj.h
 
 

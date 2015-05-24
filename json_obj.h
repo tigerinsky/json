@@ -60,10 +60,13 @@ private:
     std::vector<JsonObj*> _vector;
 };
 
+typedef std::unordered_map<std::string, JsonObj*>::iterator iterator_t;
 class JsonMap : public JsonObj {
 public:
     obj_type type() { return MAP; }
     JsonObj*& operator[](const char* k);
+    iterator_t begin();
+    iterator_t end();
 private:
     std::unordered_map<std::string, JsonObj*> _map;
 };
