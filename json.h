@@ -2,6 +2,7 @@
 #define __JSON_H_
 #include <iconv.h>
 #include <list>
+#include <iostream> 
 #include "json_obj.h"
 
 namespace tis {
@@ -36,6 +37,7 @@ private:
     static bool _s_init_unescape_map();
     static bool _s_init_hex_map();
     static bool _s_initer;
+    static bool _s_init_handler_map();
 
 public:
     Json();
@@ -44,7 +46,7 @@ public:
 public:
     JsonObj* create(int type); 
     JsonObj* deserialize(const char* str);
-    void serialize(const JsonObj* obj, std::string* str);
+    std::string serialize(const JsonObj* obj);
     void clear();
 
 private:

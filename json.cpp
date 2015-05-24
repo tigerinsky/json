@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
+#include <sstream>
 #include "exception.h"
 namespace tis {
 namespace json {
@@ -71,8 +72,11 @@ JsonObj* Json::deserialize(const char* str) {
     return deserialize_value();
 }
 
-void Json::serialize(const JsonObj* obj, std::string* str) {
-    
+std::string Json::serialize(const JsonObj* obj) {
+    std::stringbuf buf;
+    std::ostream os (&buf);  
+    os << *obj;
+    return buf.str();
 }
 
 JsonObj* Json::deserialize_value() {
@@ -355,22 +359,24 @@ bool Json::_s_init_unescape_map() {
 bool Json::_s_init_hex_map(){
     memset(_s_hex_map, 0, sizeof(_s_hex_map));
     for( char c = '0'; c <= '9'; ++ c ){
-        _s_hex_map[c] = c - '0';
+        _s_hex_map[uint8_t(c)] = c - '0';
     }
     for( char c = 'A'; c <= 'F'; ++ c ){
-        _s_hex_map[c] = 10 + c - 'A';
+        _s_hex_map[uint8_t(c)] = 10 + c - 'A';
     }
     for( char c = 'a'; c <= 'f'; ++ c ){
-        _s_hex_map[c] = 10 + c - 'a';
+        _s_hex_map[uint8_t(c)] = 10 + c - 'a';
     }
     return true;
 }
 
-Json::token_type Json::_s_token_map[0x100];
-char Json::_s_unescape_map[0x100];
-uint16_t Json::_s_hex_map[0x100];
+Json::token_type Json::_s_token_map[];
+char Json::_s_unescape_map[];
+uint16_t Json::_s_hex_map[];
 
-bool Json::_s_initer = (Json::_s_init_token_map(), Json::_s_init_unescape_map(), Json::_s_init_hex_map());
+bool Json::_s_initer = (Json::_s_init_token_map(), 
+                        Json::_s_init_unescape_map(), 
+                        Json::_s_init_hex_map());
 
 }
 }

@@ -24,7 +24,7 @@ void JsonNumber::set(int64_t i) {
     _cur_value.int64_value = i;
 }
 
-uint64_t JsonNumber::to_uint64() {
+uint64_t JsonNumber::to_uint64() const {
     switch (_cur_type) {
     case double_type: 
         if (_cur_value.double_value < 0) {
@@ -38,7 +38,7 @@ uint64_t JsonNumber::to_uint64() {
     }
 }
 
-int64_t JsonNumber::to_int64() {
+int64_t JsonNumber::to_int64() const {
     switch (_cur_type) {
     case double_type: 
         return (int64_t)_cur_value.double_value;
@@ -49,7 +49,7 @@ int64_t JsonNumber::to_int64() {
     }
 }
 
-double JsonNumber::to_double() {
+double JsonNumber::to_double() const {
     switch (_cur_type) {
     case double_type: 
         return _cur_value.double_value;
@@ -58,6 +58,18 @@ double JsonNumber::to_double() {
     case uint64_type:
         return (double)_cur_value.uint64_value;
     }
+}
+
+std::ostream& operator<<(std::ostream& os, const JsonNumber& number) {
+    switch (number._cur_type) {
+    case JsonNumber::double_type: 
+        return os << number._cur_value.double_value;
+    case JsonNumber::int64_type: 
+        return os << number._cur_value.int64_value;
+    case JsonNumber::uint64_type: 
+        return os << number._cur_value.uint64_value;
+    }
+    return os;
 }
 
 }

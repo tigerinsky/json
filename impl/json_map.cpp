@@ -15,5 +15,20 @@ iterator_t JsonMap::end() {
     return _map.end();
 }
 
+size_t JsonMap::size() {
+    return _map.size();
+}
+
+std::ostream& operator<<(std::ostream& os, const JsonMap& map) {
+    JsonMap& map2 = (JsonMap&)map;
+    os << '{';
+    for (auto ite : map2) {
+        os << '"' << ite.first << "\":"; 
+        JsonObj* obj = ite.second;
+        os << *obj << ',';
+    }
+    return os << '}';
+}
+
 }
 }
