@@ -3,6 +3,7 @@
 #include <iconv.h>
 #include <list>
 #include <iostream> 
+#include <sstream>
 #include "json_obj.h"
 
 namespace tis {
@@ -33,13 +34,18 @@ private:
     static token_type _s_token_map[0x100];
     static char _s_unescape_map[0x100];
     static uint16_t _s_hex_map[0x100];
+    static char _s_invert_hex_map[0x100];
+    static char _s_escape_map[0x100];
     static bool _s_init_token_map();
     static bool _s_init_unescape_map();
     static bool _s_init_hex_map();
+    static bool _s_init_escape_map();
+    static bool _s_init_invert_hex_map();
     static bool _s_initer;
     static bool _s_init_handler_map();
 
 public:
+    friend class JsonObj;
     Json();
     virtual ~Json();
 
@@ -62,13 +68,19 @@ private:
     void skip_white();
 
 private:
+    void escape_string(const char* data, size_t len);
+    void convert_unicode(const char* unicode, size_t len);
+
+private:
     std::list<JsonObj*> _alloc_objs;
     char* _str_buf;
     int _str_buf_size;
     int _str_buf_capacity; 
     std::string _unicode_buf;
+    std::string _serialize_buf;
     const char* _cur;
     iconv_t _conv;
+    iconv_t _out_conv;
 };
 
 }

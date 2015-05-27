@@ -1,4 +1,6 @@
 #include "../json_obj.h"
+#include "string_helper.h"
+#include "../exception.h"
 
 namespace tis {
 namespace json {
@@ -20,7 +22,7 @@ size_t JsonString::size() {
 }
 
 std::ostream& operator<<(std::ostream& os, const JsonString& s) {
-    return os << s._str;
+    return os << s._escape(s._str.c_str(), s._str.size());
 }
 
 }

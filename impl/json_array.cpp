@@ -26,7 +26,7 @@ std::ostream& operator<<(std::ostream& os, const JsonArray& arr) {
         os << ", ";
     }
     if (arr.size() > 0) {
-        os << arr.get(arr.size() - 1);
+        os << *(arr.get(arr.size() - 1));
     }
     return os << ']';
 }

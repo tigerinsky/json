@@ -5,7 +5,8 @@ namespace tis {
 namespace json {
 
 enum obj_type {
-    STRING = 1,
+    UNKNOWN = 0,
+    STRING,
     NUMBER,
     MAP,
     ARRAY,

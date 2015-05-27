@@ -23,7 +23,7 @@ std::ostream& operator<<(std::ostream& os, const JsonMap& map) {
     JsonMap& map2 = (JsonMap&)map;
     os << '{';
     for (auto ite : map2) {
-        os << '"' << ite.first << "\":"; 
+        os << '"' << map._escape(ite.first.c_str(), ite.first.size()) << "\":"; 
         JsonObj* obj = ite.second;
         os << *obj << ',';
     }

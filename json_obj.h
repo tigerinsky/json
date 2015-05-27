@@ -9,39 +9,61 @@
 namespace tis {
 namespace json {
 
+class Json;
+
 class JsonObj {
 public:
     virtual ~JsonObj() {}
+
 public:
     friend std::ostream& operator<<(std::ostream& os, const JsonObj& o);
-    virtual obj_type type() const = 0;
+    virtual obj_type type() const { return _type;}
+
+protected:
+    std::string& _escape(const char* s, size_t len) const;
+
+protected:
+    JsonObj(obj_type t=UNKNOWN, Json* json=NULL):_type(t), _json(json) {}
+
+protected:
+    Json* _json;
+    obj_type _type;
 };
 std::ostream& operator<<(std::ostream& os, const JsonObj& o);
 
 class JsonString : public JsonObj {
+friend std::ostream& operator<<(std::ostream& os, const JsonString& n);
+friend class Json;
 public:
-    obj_type type() const { return STRING; }
     void assign(const char* str);
     void assign(const char* str, size_t len);
     const char* c_str();
     size_t size();
-    friend std::ostream& operator<<(std::ostream& os, const JsonString& n);
+     
 private:
+    explicit JsonString(Json* json) : JsonObj(STRING, json) {}
     std::string _str;
 };
 std::ostream& operator<<(std::ostream& os, const JsonString& s);
 
 class JsonNumber : public JsonObj {
+friend std::ostream& operator<<(std::ostream& os, const JsonNumber& n);
+friend class Json;
 public:
-    JsonNumber();
-    obj_type type() const { return NUMBER; }
     void set(double d);
     void set(uint64_t u);
     void set(int64_t i);
     uint64_t to_uint64() const;
     int64_t to_int64() const;
     double to_double() const;
-    friend std::ostream& operator<<(std::ostream& os, const JsonNumber& n);
+
+private:
+    explicit JsonNumber(Json* json) : 
+        JsonObj(NUMBER, json), 
+        _cur_type(uint64_type) {
+        _cur_value.uint64_value = 0;     
+    }
+
 private:
     enum number_type {
         double_type, 
@@ -59,14 +81,15 @@ private:
 std::ostream& operator<<(std::ostream& out, const JsonNumber& t1);
 
 class JsonArray : public JsonObj {
+friend std::ostream& operator<<(std::ostream& out, const JsonArray& arr);
+friend class Json;
 public:
-    obj_type type() const { return ARRAY; }
     size_t size() const;
     JsonObj*& operator[](size_t idx);
     JsonObj* get(size_t idx) const;
     void push_back(JsonObj* obj);
-    friend std::ostream& operator<<(std::ostream& out, const JsonArray& arr);
 private:
+    explicit JsonArray(Json* json) : JsonObj(ARRAY, json) {}
     std::vector<JsonObj*> _vector;
 };
 std::ostream& operator<<(std::ostream& out, const JsonArray& arr);
@@ -74,34 +97,36 @@ std::ostream& operator<<(std::ostream& out, const JsonArray& arr);
 typedef std::unordered_map<std::string, JsonObj*>::iterator iterator_t;
 typedef std::unordered_map<std::string, JsonObj*>::const_iterator const_iterator_t;
 class JsonMap : public JsonObj {
+friend std::ostream& operator<<(std::ostream& out, const JsonMap& map);
+friend class Json;
 public:
-    obj_type type() const { return MAP; }
     JsonObj*& operator[](const char* k);
     size_t size();
     iterator_t begin();
     iterator_t end();
-    friend std::ostream& operator<<(std::ostream& out, const JsonMap& map);
 private:
+    explicit JsonMap(Json* json) : JsonObj(MAP, json) {}
     std::unordered_map<std::string, JsonObj*> _map;
 };
 std::ostream& operator<<(std::ostream& out, const JsonMap& map);
 
 class JsonBool : public JsonObj {
+friend std::ostream& operator<<(std::ostream& os, const JsonBool& n);
+friend class Json;
 public:
-    JsonBool() : _bool(false) {}
-    obj_type type() const { return BOOL; }
     void set(bool b) { _bool = b; }
     bool get() const { return _bool; }
-    friend std::ostream& operator<<(std::ostream& os, const JsonBool& n);
 private:
+    explicit JsonBool(Json* json) : JsonObj(BOOL, json), _bool(false) {}
     bool _bool;
 };
 std::ostream& operator<<(std::ostream& os, const JsonBool& b);
 
 class JsonNil : public JsonObj {
-public:
-    obj_type type() const { return NIL;}
-    friend std::ostream& operator<<(std::ostream& os, const JsonNil& n);
+friend std::ostream& operator<<(std::ostream& os, const JsonNil& n);
+friend class Json;
+private:
+    explicit JsonNil(Json* json) : JsonObj(NIL, json) {}
 };
 std::ostream& operator<<(std::ostream& os, const JsonNil& n);
 

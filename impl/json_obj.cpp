@@ -1,23 +1,29 @@
 #include "../json_obj.h"
+#include "../json.h"
 
 namespace tis {
 namespace json {
+
+std::string& JsonObj::_escape(const char* s, size_t len) const {
+    _json->escape_string(s, len);
+    return _json->_serialize_buf;
+}
 
 std::ostream& operator<<(std::ostream& os, const JsonObj& o) {
         const JsonObj* obj = &o;
         switch (o.type()) {
         case STRING:
-            os << *((JsonString*)obj); 
+            return os << *((JsonString*)obj); 
         case NUMBER:
-            os << *((JsonNumber*)obj); 
+            return os << *((JsonNumber*)obj); 
         case MAP:
-            os << *((JsonMap*)obj); 
+            return os << *((JsonMap*)obj); 
         case ARRAY:
-            os << *((JsonArray*)obj); 
+            return os << *((JsonArray*)obj); 
         case BOOL:
-            os << *((JsonBool*)obj); 
+            return os << *((JsonBool*)obj); 
         case NIL:
-            os << *((JsonNil*)obj); 
+            return os << *((JsonNil*)obj); 
         } 
         return os;
 }

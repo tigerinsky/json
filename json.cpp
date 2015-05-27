@@ -3,8 +3,9 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
-#include <sstream>
+#include <stdio.h>
 #include "exception.h"
+#include "string_helper.h"
 namespace tis {
 namespace json {
 void Json::skip_white() {
@@ -17,22 +18,22 @@ JsonObj* Json::create(int t) {
     JsonObj* obj = NULL;
     switch (t) {
     case STRING:  
-        obj = new(std::nothrow) JsonString;
+        obj = new(std::nothrow) JsonString(this);
         break;
     case NUMBER:
-        obj = new(std::nothrow) JsonNumber;
+        obj = new(std::nothrow) JsonNumber(this);
         break;
     case MAP:
-        obj = new(std::nothrow) JsonMap;
+        obj = new(std::nothrow) JsonMap(this);
         break;
     case ARRAY:
-        obj = new(std::nothrow) JsonArray;
+        obj = new(std::nothrow) JsonArray(this);
         break;
     case BOOL:
-        obj = new(std::nothrow) JsonBool;
+        obj = new(std::nothrow) JsonBool(this);
         break;
     case NIL:
-        obj = new(std::nothrow) JsonNil;
+        obj = new(std::nothrow) JsonNil(this);
         break;
     default:
         return NULL;
@@ -42,13 +43,28 @@ JsonObj* Json::create(int t) {
 }
 
 Json::Json() {
-    _conv = (iconv_t)-1;
     _str_buf_size = 0;
     _str_buf_capacity = DEFAULT_STRING_BUF_SIZE;
     _str_buf = (char*)malloc(DEFAULT_STRING_BUF_SIZE);
     if (!_str_buf) {
         throw NoEnoughMemException() << "init str buff error"; 
     }
+    _conv = iconv_open("utf8", "utf16"); 
+    if ((iconv_t)-1 == _conv) {
+        throw EncodingException() << "init iconv error";
+    }
+    _out_conv = iconv_open("utf16", "utf8");
+    if ((iconv_t)-1 == _out_conv) {
+        throw EncodingException() << "init out iconv error";
+    }
+    char* s = "1";
+    char* buf = new char[5];
+    char* pout = buf;
+    size_t in = 1;
+    size_t out = 4;
+    buf[4] = '\0';
+    iconv(_out_conv, &s, &in, &pout, &out);
+    delete[] buf;
 }
 
 Json::~Json() {
@@ -62,19 +78,13 @@ void Json::clear() {
 }
 
 JsonObj* Json::deserialize(const char* str) {
-    if ((iconv_t)-1 == _conv) {
-        _conv = iconv_open("utf8", "utf16"); 
-        if ((iconv_t)-1 == _conv) {
-            throw EncodingException() << "init iconv error";
-        }
-    }
     _cur = str;
     return deserialize_value();
 }
 
 std::string Json::serialize(const JsonObj* obj) {
     std::stringbuf buf;
-    std::ostream os (&buf);  
+    std::ostream os(&buf);  
     os << *obj;
     return buf.str();
 }
@@ -139,7 +149,11 @@ JsonObj* Json::deserialize_map() {
                 throw ParseException()<< "deserialize map error, missing':'";
             }
             ++ _cur; //skip :
-            value = deserialize_value();
+            JsonObj* v =  deserialize_value();
+            if (!v) {
+                throw ParseException()<< "deserialize map error, no value found"; 
+            }
+            value = v;
             skip_white();
             if (_s_token_map[(uint8_t)(*_cur)] == MAP_END) {
                 break;
@@ -148,7 +162,9 @@ JsonObj* Json::deserialize_map() {
             }
             ++ _cur; //skip ,
             skip_white();
-            if (_s_token_map[(uint8_t)(*_cur)] != STRING_LITERAL) {
+            if (_s_token_map[(uint8_t)(*_cur)] == MAP_END) {
+                break; 
+            } else if (_s_token_map[(uint8_t)(*_cur)] != STRING_LITERAL) {
                 throw ParseException()<< "deserialize map error, missing'\"'";
             }
         }
@@ -165,8 +181,11 @@ JsonObj* Json::deserialize_array() {
     ++ _cur; //skip '['
     skip_white();
     if (_s_token_map[(uint8_t)(*_cur)] != ARRAY_END) {
-        while(true){
-            array->push_back(deserialize_value());
+        while(true) {
+            JsonObj* obj = deserialize_value();
+            if (obj) {
+                array->push_back(obj);
+            }
             skip_white();
             if (_s_token_map[(uint8_t)(*_cur)] == ARRAY_END) {
                 break;
@@ -269,6 +288,7 @@ void Json::deserialize_string() {
     } else {
         throw ParseException()<<"parse string error: no end";
     }
+    _str_buf[_str_buf_size] = '\0';
 }
 
 JsonObj* Json::deserialize_number() {
@@ -315,6 +335,66 @@ JsonObj* Json::deserialize_number() {
     return number;
 }
 
+void Json::convert_unicode(const char* unicode, size_t len) {
+    char* p_in = (char*)unicode;
+    size_t size_in = len;
+    char* p_out = _str_buf;
+    size_t size_out = _str_buf_capacity;
+    if ((size_t)-1 == iconv(_out_conv, 
+                            &p_in, 
+                            &size_in, 
+                            &p_out, 
+                            &size_out)) {
+        throw ParseException() << "serialize iconv error"; 
+    }
+    assert(0 == size_in); 
+    size_out = _str_buf_capacity - size_out;
+    assert(0 == size_out % sizeof(uint16_t));
+    uint16_t* up = (uint16_t*)_str_buf;
+    for (uint32_t i = 0; i < size_out / sizeof(uint16_t); ++i) {
+        _serialize_buf.append("\\u");
+        uint16_t unicode = *(up + i);
+        _serialize_buf.push_back(_s_invert_hex_map[unicode >> 12 & 0xf]);
+        _serialize_buf.push_back(_s_invert_hex_map[unicode >> 8 & 0xf]);
+        _serialize_buf.push_back(_s_invert_hex_map[unicode >> 4 & 0xf]);
+        _serialize_buf.push_back(_s_invert_hex_map[unicode & 0xf]);
+    }
+}
+
+void Json::escape_string(const char* data, size_t len) {
+    const char* p = data;
+    const char* last_utf8 = NULL;
+    _str_buf_size = 0;
+    enlarge_strbuf(len * 3 + 1);
+    _serialize_buf.clear();
+    while (true) {
+        int size = tis::StringHelper::next_term_utf8(p);  
+        if (0 == size) {
+            break; 
+        } else if (1 == size) {
+            if (last_utf8) {
+                convert_unicode(last_utf8, p - last_utf8);
+                last_utf8 = NULL;
+            }
+            if (_s_escape_map[uint8_t(*p)]) {
+                _serialize_buf.push_back('\\'); 
+                _serialize_buf.push_back(_s_escape_map[uint8_t(*p)]); 
+            } else {
+                _serialize_buf.push_back(*p);
+            }
+            ++p;
+        } else {
+            if (!last_utf8) {
+                last_utf8 = p; 
+            }
+            p += size;
+        }
+    }
+    if (last_utf8) {
+        convert_unicode(last_utf8, p - last_utf8); 
+    }
+}
+
 bool Json::_s_init_token_map() {
     _s_token_map['\0'] = END;
     _s_token_map[' ']  = WHITE_SPACE;
@@ -337,22 +417,36 @@ bool Json::_s_init_token_map() {
     _s_token_map['+']  = NUMBER_LITERAL;  //extended
     _s_token_map['-']  = NUMBER_LITERAL;
     for( char c = '0'; c <= '9'; ++ c ) {
-        _s_token_map[c] = NUMBER_LITERAL;
+        _s_token_map[uint8_t(c)] = NUMBER_LITERAL;
     }
     return true;
 }
 
 bool Json::_s_init_unescape_map() {
     memset(_s_unescape_map, 0, sizeof(_s_unescape_map));
-    _s_unescape_map[key_t('\"')] = '\"';
-    _s_unescape_map[key_t('\'')] = '\"';
-    _s_unescape_map[key_t('\\')] = '\\';
-    _s_unescape_map[key_t('/' )] = '/';
-    _s_unescape_map[key_t('b')] = '\b';
-    _s_unescape_map[key_t('f')] = '\f';
-    _s_unescape_map[key_t('n')] = '\n';
-    _s_unescape_map[key_t('r')] = '\r';
-    _s_unescape_map[key_t('t')] = '\t';
+    _s_unescape_map[uint8_t('\"')] = '\"';
+    _s_unescape_map[uint8_t('\'')] = '\'';
+    _s_unescape_map[uint8_t('\\')] = '\\';
+    _s_unescape_map[uint8_t('/' )] = '/';
+    _s_unescape_map[uint8_t('b')] = '\b';
+    _s_unescape_map[uint8_t('f')] = '\f';
+    _s_unescape_map[uint8_t('n')] = '\n';
+    _s_unescape_map[uint8_t('r')] = '\r';
+    _s_unescape_map[uint8_t('t')] = '\t';
+    return true;
+}
+
+bool Json::_s_init_escape_map() {
+    memset(_s_escape_map, 0, sizeof(_s_escape_map));
+    _s_escape_map[uint8_t('\"')] = '\"';
+    _s_escape_map[uint8_t('\'')] = '\'';
+    _s_escape_map[uint8_t('\\')] = '\\';
+    _s_escape_map[uint8_t('/' )] = '/';
+    _s_escape_map[uint8_t('\b')] = 'b';
+    _s_escape_map[uint8_t('\f')] = 'f';
+    _s_escape_map[uint8_t('\n')] = 'n';
+    _s_escape_map[uint8_t('\r')] = 'r';
+    _s_escape_map[uint8_t('\t')] = 't';
     return true;
 }
 
@@ -370,13 +464,31 @@ bool Json::_s_init_hex_map(){
     return true;
 }
 
+bool Json::_s_init_invert_hex_map() {
+    memset(_s_invert_hex_map, 0, sizeof(_s_invert_hex_map));
+    for( char c = '0'; c <= '9'; ++ c ){
+        _s_invert_hex_map[c - '0'] = c;
+    }
+    for( char c = 'A'; c <= 'F'; ++ c ){
+        _s_invert_hex_map[10 + c - 'A'] = c;
+    }
+    for( char c = 'a'; c <= 'f'; ++ c ){
+        _s_invert_hex_map[10 + c - 'a'] = c;
+    }
+    return true;
+}
+
 Json::token_type Json::_s_token_map[];
 char Json::_s_unescape_map[];
+char Json::_s_escape_map[];
 uint16_t Json::_s_hex_map[];
+char Json::_s_invert_hex_map[];
 
 bool Json::_s_initer = (Json::_s_init_token_map(), 
                         Json::_s_init_unescape_map(), 
-                        Json::_s_init_hex_map());
+                        Json::_s_init_hex_map(),
+                        Json::_s_init_escape_map(),
+                        Json::_s_init_invert_hex_map());
 
 }
 }

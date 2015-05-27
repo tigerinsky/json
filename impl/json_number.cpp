@@ -4,11 +4,6 @@
 namespace tis {
 namespace json {
 
-JsonNumber::JsonNumber() {
-    _cur_type = uint64_type;
-    _cur_value.uint64_value = 0;
-}
-
 void JsonNumber::set(double d) {
     _cur_type = double_type;
     _cur_value.double_value = d;
